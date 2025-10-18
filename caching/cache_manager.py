@@ -1,4 +1,7 @@
 # LRU Cache
+import time
+from caching.logger import log_status
+
 class Node:
     def __init__(self, key, value, next = None, prev = None):
         self.key = key
@@ -14,7 +17,8 @@ class LinkedList:
         self.tail.prev = self.head
 
     def insert_at_front(self, node: Node):
-        self.remove_node(node)
+        if node.prev is not None and node.next is not None:
+            self.remove_node(node)
         node.next = self.head.next
         node.next.prev = node
         self.head.next = node
@@ -30,16 +34,18 @@ class LinkedList:
         return node
 
 class CacheManager:
-    def __init__(self, capacity):
+    def __init__(self, capacity = 50):
         self.capacity = capacity
         self.cache = {}
         self.list = LinkedList()
 
     def get(self, key):
         if key not in self.cache:
+            log_status(time.time(), key, "get", "miss")
             return None
         node = self.cache[key]
         self.list.insert_at_front(node)
+        log_status(time.time(), key, "get", "hit")
         return node.value
 
     def put(self, key, value):
@@ -54,4 +60,4 @@ class CacheManager:
             new_node = Node(key, value)
             self.cache[key] = new_node
             self.list.insert_at_front(new_node)
-            
+        log_status(time.time(), key, "set")
