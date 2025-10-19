@@ -34,21 +34,23 @@ class LinkedList:
         return node
 
 class CacheManager:
-    def __init__(self, capacity = 50):
+    def __init__(self, session, capacity = 5):
         self.capacity = capacity
         self.cache = {}
         self.list = LinkedList()
-
+        self.session = session
+        self.key_stats = {}
+    
     def get(self, key):
         if key not in self.cache:
-            log_status(time.time(), key, "get", "miss")
+            self.log_event(key, "get", "miss")
             return None
         node = self.cache[key]
         self.list.insert_at_front(node)
-        log_status(time.time(), key, "get", "hit")
+        self.log_event(key, "get", "hit")
         return node.value
 
-    def put(self, key, value):
+    def set(self, key, value):
         if key in self.cache:
             node = self.cache[key]
             node.value = value
@@ -57,7 +59,26 @@ class CacheManager:
             if len(self.cache) >= self.capacity:
                 removed_node = self.list.remove_from_back()
                 del self.cache[removed_node.key]
+                del self.key_stats[removed_node.key]
             new_node = Node(key, value)
             self.cache[key] = new_node
             self.list.insert_at_front(new_node)
-        log_status(time.time(), key, "set")
+        self.log_event(key, "set")
+
+
+    def log_event(self, key, event, status = ""):
+        now = time.time()
+        stats = self.key_stats.get(key, {"access_count": 0, "last_access": None})
+
+        if stats["last_access"] is None:
+            time_since_last_access = None
+        else:
+            time_since_last_access = now - stats["last_access"]
+
+        stats["access_count"] += 1
+        stats["last_access"] = now
+        self.key_stats[key] = stats
+
+        log_status(self.session, now, key, event, status, time_since_last_access, stats["access_count"])
+        return stats
+        
